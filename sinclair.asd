@@ -20,7 +20,9 @@
   :license "ISC"
   :depends-on (:restas
                :cl-markdown
-               :cl-who)
+               :cl-who
+               :st-json
+               :swank)
   :components ((:module "src"
                 :components
                 ((:file "sinclair"))))
