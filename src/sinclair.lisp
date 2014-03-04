@@ -17,6 +17,7 @@
 
 
 (defun koala-list-files (path)
+  "Dispatch koala forth to retrieve a list of files at the path, returned as a list of pathnames."
   (let ((path (if (null path)
                   #P "."
                   path)))
@@ -28,12 +29,14 @@
                         :output stream))))))
 
 (defun file-string (path)
+  "Read an entire file into a string buffer."
   (with-open-file (stream path)
     (let ((data (make-string (file-length stream))))
       (read-sequence data stream)
       data)))
 
 (defun ends-with (filename extension)
+  "Predicate that returns true if the filename ends with the extension."
   (let ((filename (if (pathnamep filename)
                       (namestring filename)
                       filename)))
@@ -49,34 +52,42 @@
                 nil))))))
 
 (defun dibbler-load-nodes (paths)
+  "Dispatch dibbler to proceess the files listed. Returns an ST-JSON structure with the results."
   (let ((paths (if (listp paths)
                    paths
                    (list paths))))
     (let ((paths (mapcar #'namestring paths)))
-      (string-right-trim *trailing-whitespace*
-                         (with-output-to-string (stream)
-                           (sb-ext:run-program *dibbler-path*
-                                               paths
-                                               :output stream))))))
-
-(defun path-to-arg-string (path)
-  (if (pathnamep path)
-      (namestring path)
-      path))
-
-(defun dispatch-dibbler (path)
-  (let ((path (path-to-arg-string path)))
-      (string-right-trim *trailing-whitespace*
-                         (with-output-to-string (stream)
-                           (sb-ext:run-program *dibbler-path*
-                                               (list path)
-                                               :output stream)))))
+      (st-json:read-json-from-string
+       (string-right-trim *trailing-whitespace*
+                          (with-output-to-string (stream)
+                            (sb-ext:run-program *dibbler-path*
+                                                paths
+                                                :output stream)))))))
 
 (defun filter-nodes (paths)
+  "Remove any paths not ending in the markdown extension."
   (remove-if-not (lambda (filename)
                    (ends-with filename *md-extension*))
                  paths))
 
+(defun filter-out-nodes (paths)
+  "Remove any paths ending in the markdown extension."
+  (remove-if (lambda (filename)
+               (ends-with filename *md-extension*))
+             paths))
+
+(defun push-failed (not-nodes node-json)
+  "Push any of the failed nodes from node-json into the collection of not-nodes."
+  (let ((failed-node-list (remove-if (lambda (node)
+                                       (equalp :TRUE
+                                               (st-json:getjso "success"
+                                                               node)))
+                                     node-json))
+        (not-nodes not-nodes))
+
+    (dolist (failed-node failed-node-list)
+      (push (st-json:getjso "path" failed-node) not-nodes))
+    not-nodes))
 
 
 ;;; A node can be either a page or a post. A page is a static page
@@ -119,12 +130,14 @@
   (:documentation "the node class contains information representing a node"))
 
 (defun key-from-node (key node)
+  "Given a node JSON structure as returned by the dibbler minion in its default mode, retrieves the key from the node."
   (multiple-value-bind (value present)
       (st-json:getjso key (st-json:getjso "node" node))
     (if present
         value nil)))
 
 (defun make-node (node)
+  "Given a JSON representation of a node result container, process it into a node object."
   (let ((success (st-json:from-json-bool
                   (st-json:getjso "success" node))))
     (if (not success)
@@ -138,3 +151,19 @@
                        :mode (if (key-from-node "static" node) :page :post)
                        :date (key-from-node "date" node)
                        :title (key-from-node "title" node)))))
+
+(defun send-forth-minions (paths)
+  "Send forth the minions who will seek out whom they may devour."
+  (let* ((file-list (koala-list-files paths))
+         (not-nodes (filter-out-nodes file-list))
+         (node-list (filter-nodes file-list))
+         (node-json (dibbler-load-nodes node-list)))
+    (let ((not-nodes (push-failed not-nodes node-json))
+          (node-json (remove-if (lambda (node)
+                                  (equalp :FALSE
+                                          (st-json:getjso "success" node)))
+                                node-json)))
+      (list
+       :FAILED not-nodes
+       :NODES (mapcar #'make-node node-json)))))
+
