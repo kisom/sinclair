@@ -18,7 +18,7 @@
        (string-right-trim *trailing-whitespace*
          (with-output-to-string (stream)
            (sb-ext:run-program *koala-path*
-                               `("-o" "lisp" ,(namestring path))
+                               `("-s" "-o" "lisp" ,(namestring path))
                         :output stream))))))
 
 (defun file-string (path)
@@ -29,6 +29,7 @@
 
 (defvar *trailing-whitespace* '(#\Space #\Tab #\Newline))
 (defvar *koala-path* #P"/home/kyle/code/go/bin/koala")
+(defvar *dibbler-path* #P"/home/kyle/code/go/bin/dibbler")
 (defvar *md-extension* ".md")
 
 (defun ends-with (filename extension)
@@ -45,16 +46,61 @@
                         extension)
                 t
                 nil))))))
+
+(defun dibbler-load-nodes (paths)
+  (let ((paths (if (listp paths)
+                   paths
+                   (list paths))))
+    (let ((paths (mapcar #'namestring paths)))
+      (string-right-trim *trailing-whitespace*
+                         (with-output-to-string (stream)
+                           (sb-ext:run-program *dibbler-path*
+                                               paths
+                                               :output stream))))))
  
-(defun render-files (path)
-  (let ((file-list 
-         (remove-if-not (lambda (filename)
-                          (ends-with filename *md-extension*))
-                        (koala-list-files path))))
-    (mapcar (lambda (filename)
-              (with-output-to-string (stream)
-                (let ((body (file-string filename)))
-                  (cl-markdown:markdown body
-                                        :stream stream
-                                        :format :html))))
-            file-list)))
+(defun filter-nodes (paths)
+  (remove-if-not (lambda (filename)
+                   (ends-with filename *md-extension*))
+                 paths))
+
+
+
+;;; A node can be either a page or a post. A page is a static page
+;;; that does not have a date, author, or set of tags associated with
+;;; it. A post is written by an author at a specific time, and has
+;;; some tags associated with that allow the post to be grouped
+;;; together by related subjects. Index-wise, posts are indexed on the
+;;; front page., organised by year. It is assumed the template will
+;;; contain links to pages, or at least to starting points. Pages are
+;;; not automatically indexed on the front page. Finally, pages are
+;;; excluded from RSS updates.
+
+(defclass node ()
+  ((title :initarg :title
+          :accessor node-title
+          :documentation "node's title used in HTML rendering")
+   (date  :initarg :date
+          :accessor node-date
+          :documentation "date the node was published")
+   (mode  :initarg :mode
+          :accessor node-mode
+          :documentation "the post's mode; one of :post or :page")
+   (tags  :initarg :tags
+          :accessor node-tags
+          :type 'list
+          :documentation
+          "a list of strings containing metadata associated with the node")
+   (body  :initarg :body
+          :accessor node-body
+          :documentation "the rendered HTML fragment of the body")
+   (slug  :initarg :slug
+          :accessor node-slug
+          :documentation "the relative URL of the node")
+   (path  :initarg :path
+          :accessor node-path
+          :documentation "the filesystem path to the underlying file")
+   (mtime :initarg :mtime
+          :accessor node-mtime
+          :documentation "last-modified time used for updates"))
+  (:documentation "the node class contains information representing a node"))
+
