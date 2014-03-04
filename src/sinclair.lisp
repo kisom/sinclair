@@ -10,6 +10,12 @@
 
 ;; Hacks and glory await!
 
+(defvar *trailing-whitespace* '(#\Space #\Tab #\Newline))
+(defvar *koala-path* #P"/home/kyle/code/go/bin/koala")
+(defvar *dibbler-path* #P"/home/kyle/code/go/bin/dibbler")
+(defvar *md-extension* ".md")
+
+
 (defun koala-list-files (path)
   (let ((path (if (null path)
                   #P "."
@@ -26,11 +32,6 @@
     (let ((data (make-string (file-length stream))))
       (read-sequence data stream)
       data)))
-
-(defvar *trailing-whitespace* '(#\Space #\Tab #\Newline))
-(defvar *koala-path* #P"/home/kyle/code/go/bin/koala")
-(defvar *dibbler-path* #P"/home/kyle/code/go/bin/dibbler")
-(defvar *md-extension* ".md")
 
 (defun ends-with (filename extension)
   (let ((filename (if (pathnamep filename)
@@ -57,7 +58,20 @@
                            (sb-ext:run-program *dibbler-path*
                                                paths
                                                :output stream))))))
- 
+
+(defun path-to-arg-string (path)
+  (if (pathnamep path)
+      (namestring path)
+      path))
+
+(defun dispatch-dibbler (path)
+  (let ((path (path-to-arg-string path)))
+      (string-right-trim *trailing-whitespace*
+                         (with-output-to-string (stream)
+                           (sb-ext:run-program *dibbler-path*
+                                               (list path)
+                                               :output stream)))))
+
 (defun filter-nodes (paths)
   (remove-if-not (lambda (filename)
                    (ends-with filename *md-extension*))
@@ -104,3 +118,23 @@
           :documentation "last-modified time used for updates"))
   (:documentation "the node class contains information representing a node"))
 
+(defun key-from-node (key node)
+  (multiple-value-bind (value present)
+      (st-json:getjso key (st-json:getjso "node" node))
+    (if present
+        value nil)))
+
+(defun make-node (node)
+  (let ((success (st-json:from-json-bool
+                  (st-json:getjso "success" node))))
+    (if (not success)
+        nil
+        (make-instance 'node
+                       :mtime (key-from-node "mtime" node)
+                       :path (key-from-node "path" node)
+                       :slug (key-from-node "slug" node)
+                       :body (key-from-node "body" node)
+                       :tags (key-from-node "tags" node)
+                       :mode (if (key-from-node "static" node) :page :post)
+                       :date (key-from-node "date" node)
+                       :title (key-from-node "title" node)))))
