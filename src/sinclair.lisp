@@ -165,11 +165,7 @@
 
 (defun red-node-slot (node-name slot-name)
   "Retrieve the slot value from redis for the given node."
-  (multiple-value-bind (value present)
-      (redis:red-hget node-name slot-name)
-    (if present
-        value
-        nil)))
+  (redis:red-hget node-name slot-name))
 
 (defun load-node (path)
   "Load the node from Redis."
@@ -185,6 +181,25 @@
                        :mode  (red-node-slot node-name "mode")
                        :date  (red-node-slot node-name "date")
                        :title (red-node-slot node-name "title")))))
+
+(defun store-node-slot (node slot)
+  (redis:red-hset (concatenate 'string
+                            "node-"
+                            (node-path node))
+                  (string-downcase (string slot))
+                  (slot-value node slot)))
+
+(defun store-node (node)
+  "Store the node in Redis."
+  (and
+   (store-node-slot node 'title)
+   (store-node-slot node 'path)
+   (store-node-slot node 'slug)
+   (store-node-slot node 'body)
+   (store-node-slot node 'tags)
+   (store-node-slot node 'mode)
+   (store-node-slot node 'date)
+   (store-node-slot node 'mtime)))
 
 (defun send-forth-minions (paths)
   "Send forth the minions who will seek out whom they may devour."
@@ -214,14 +229,14 @@
            (string-right-trim *trailing-whitespace*
                               (with-output-to-string (stream)
                                 (sb-ext:run-program *dibbler-path*
-                                                    (list "-mod" (namestring path))
+                                                    (list "-mod" 
+                                                          (namestring path))
                                                     :output stream)))))))
     (if (equalp (st-json:getjso "success" mod-json) :FALSE)
         nil
         (st-json:getjso "mtime"
                         (st-json:getjso "result"
                                         mod-json)))))
-
 
 (defun node-should-update (path)
   "Predicate returning T if a node should update itself."
