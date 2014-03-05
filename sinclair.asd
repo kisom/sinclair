@@ -18,9 +18,10 @@
   :version "0.1"
   :author "K. Isom"
   :license "ISC"
-  :depends-on (:restas
-               :cl-markdown
+  :depends-on (:cl-markdown
+               :cl-redis
                :cl-who
+               :restas
                :st-json
                :swank)
   :components ((:module "src"
