@@ -16,6 +16,17 @@
 (defvar *md-extension* ".md")
 
 
+;;; start up actions
+
+(defun startup ()
+  (key-store-setup))
+
+(defun key-store-setup ()
+  (redis:connect))
+
+;;; node scanning
+
+
 (defun koala-list-files (path)
   "Dispatch koala forth to retrieve a list of files at the path, returned as a list of pathnames."
   (let ((path (if (null path)
@@ -152,6 +163,29 @@
                        :date (key-from-node "date" node)
                        :title (key-from-node "title" node)))))
 
+(defun red-node-slot (node-name slot-name)
+  "Retrieve the slot value from redis for the given node."
+  (multiple-value-bind (value present)
+      (redis:red-hget node-name slot-name)
+    (if present
+        value
+        nil)))
+
+(defun load-node (path)
+  "Load the node from Redis."
+  (let ((node-name (concatenate 'string "node-" path)))
+    (if (not (node-in-redis path))
+        nil
+        (make-instance 'node
+                       :mtime (red-node-slot node-name "mtime")
+                       :path  (red-node-slot node-name "path")
+                       :slug  (red-node-slot node-name "slug")
+                       :body  (red-node-slot node-name "body")
+                       :tags  (red-node-slot node-name "tags")
+                       :mode  (red-node-slot node-name "mode")
+                       :date  (red-node-slot node-name "date")
+                       :title (red-node-slot node-name "title")))))
+
 (defun send-forth-minions (paths)
   "Send forth the minions who will seek out whom they may devour."
   (let* ((file-list (koala-list-files paths))
@@ -167,3 +201,32 @@
        :FAILED not-nodes
        :NODES (mapcar #'make-node node-json)))))
 
+(defun node-in-redis (path)
+  "Predicate determining whether path is a valid node in redis."
+  (let ((node-name (concatenate 'string "node-" path)))
+    (redis:red-exists node-name)))
+
+(defun get-mtime (path)
+  "Retrieve the mtime for the path from disk, using dibbler."
+  (let ((mod-json
+         (first
+          (st-json:read-json-from-string
+           (string-right-trim *trailing-whitespace*
+                              (with-output-to-string (stream)
+                                (sb-ext:run-program *dibbler-path*
+                                                    (list "-mod" (namestring path))
+                                                    :output stream)))))))
+    (if (equalp (st-json:getjso "success" mod-json) :FALSE)
+        nil
+        (st-json:getjso "mtime"
+                        (st-json:getjso "result"
+                                        mod-json)))))
+
+
+(defun node-should-update (path)
+  "Predicate returning T if a node should update itself."
+  (let ((mtime (get-mtime path)))
+    (or (null mtime)
+        (not (node-in-redis path))
+        (let ((node (load-node path)))
+          (> mtime (node-mtime node))))))
