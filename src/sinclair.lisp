@@ -26,7 +26,6 @@
 
 ;;; node scanning
 
-
 (defun koala-list-files (path)
   "Dispatch koala forth to retrieve a list of files at the path, returned as a list of pathnames."
   (let ((path (if (null path)
@@ -167,6 +166,18 @@
   "Retrieve the slot value from redis for the given node."
   (redis:red-hget node-name slot-name))
 
+(defun tags-as-keywords (tags)
+  "Convert a list of tag symbols to keywords"
+  (mapcar (lambda (s)
+            (intern s "KEYWORD"))
+          (mapcar #'string tags)))
+
+(defun tags-as-strings (tags)
+  "Convert a list of tag keywords to strings"
+  (mapcar #'string-downcase
+          (mapcar #'string
+                  tags)))
+
 (defun load-node (path)
   "Load the node from Redis."
   (let ((node-name (concatenate 'string "node-" path)))
@@ -177,7 +188,11 @@
                        :path  (red-node-slot node-name "path")
                        :slug  (red-node-slot node-name "slug")
                        :body  (red-node-slot node-name "body")
-                       :tags  (red-node-slot node-name "tags")
+                       :tags  (let ((tags (red-node-slot node-name "tags")))
+                                (if (null tags)
+                                    nil
+                                    (tags-as-keywords
+                                     (read-from-string tags))))
                        :mode  (red-node-slot node-name "mode")
                        :date  (red-node-slot node-name "date")
                        :title (red-node-slot node-name "title")))))
