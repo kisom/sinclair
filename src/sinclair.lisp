@@ -193,21 +193,24 @@
 (defun load-node (path)
   "Load the node from Redis."
   (let ((node-name (concatenate 'string "node-" path)))
-    (if (not (node-in-redis path))
-        nil
-        (make-instance 'node
-                       :mtime (red-node-slot node-name "mtime")
-                       :path  (red-node-slot node-name "path")
-                       :slug  (red-node-slot node-name "slug")
-                       :body  (red-node-slot node-name "body")
-                       :tags  (let ((tags (red-node-slot node-name "tags")))
-                                (if (null tags)
-                                    nil
-                                    (tags-as-keywords
-                                     (read-from-string tags))))
-                       :mode  (red-node-slot node-name "mode")
-                       :date  (red-node-slot node-name "date")
-                       :title (red-node-slot node-name "title")))))
+    (load-node-by-name node-name)))
+
+(defun load-node-by-name (node-name)
+  (if (not (redis:red-exists node-name))
+      nil
+      (make-instance 'node
+                     :mtime (red-node-slot node-name "mtime")
+                     :path  (red-node-slot node-name "path")
+                     :slug  (red-node-slot node-name "slug")
+                     :body  (red-node-slot node-name "body")
+                     :tags  (let ((tags (red-node-slot node-name "tags")))
+                              (if (null tags)
+                                  nil
+                                  (tags-as-keywords
+                                   (read-from-string tags))))
+                     :mode  (red-node-slot node-name "mode")
+                     :date  (red-node-slot node-name "date")
+                     :title (red-node-slot node-name "title"))))
 
 (defun store-node-slot (node slot)
   (redis:red-hset (concatenate 'string
@@ -219,14 +222,14 @@
 (defun store-node (node)
   "Store the node in Redis."
   (progn
-   (store-node-slot node 'title)
-   (store-node-slot node 'path)
-   (store-node-slot node 'slug)
-   (store-node-slot node 'body)
-   (store-node-slot node 'tags)
-   (store-node-slot node 'mode)
-   (store-node-slot node 'date)
-   (store-node-slot node 'mtime)))
+    (store-node-slot node 'title)
+    (store-node-slot node 'path)
+    (store-node-slot node 'slug)
+    (store-node-slot node 'body)
+    (store-node-slot node 'tags)
+    (store-node-slot node 'mode)
+    (store-node-slot node 'date)
+    (store-node-slot node 'mtime)))
 
 (defun send-forth-minions (paths)
   "Send forth the minions who will seek out whom they may devour."
@@ -271,7 +274,7 @@
     (or (null mtime)
         (not (node-in-redis path))
         (let ((node (load-node path)))
-          (> mtime (node-mtime node))))))
+          (> mtime (parse-integer (node-mtime node)))))))
 
 (defun node-year (node)
   (cons
@@ -286,3 +289,4 @@
         (lambda (node-1 node-2)
           (< (car (node-year node-1))
              (car (node-year node-2))))))
+
