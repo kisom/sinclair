@@ -16,6 +16,18 @@
 (defvar *md-extension* ".md")
 
 
+;;; utilities
+(defun compose (&rest fns)
+  (if fns
+      (let ((fn1 (car (last fns)))
+            (fns (butlast fns)))
+        #'(lambda (&rest args)
+            (reduce #'funcall fns
+                    :from-end t
+                    :initial-value (apply fn1 args))))
+      #'identity))
+
+
 ;;; start up actions
 
 (defun startup ()
@@ -206,7 +218,7 @@
 
 (defun store-node (node)
   "Store the node in Redis."
-  (and
+  (progn
    (store-node-slot node 'title)
    (store-node-slot node 'path)
    (store-node-slot node 'slug)
