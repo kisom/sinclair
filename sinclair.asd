@@ -21,6 +21,7 @@
   :depends-on (:cl-markdown
                :cl-redis
                :cl-who
+               :local-time
                :restas
                :st-json
                :swank)

@@ -272,3 +272,17 @@
         (not (node-in-redis path))
         (let ((node (load-node path)))
           (> mtime (node-mtime node))))))
+
+(defun node-year (node)
+  (cons
+   (funcall (compose #'local-time:timestamp-year
+                     #'local-time:unix-to-timestamp
+                     #'node-date)
+            node)
+   (node-path node)))
+
+(defun sort-by-year (node-list)
+  (sort (copy-list node-list)
+        (lambda (node-1 node-2)
+          (< (car (node-year node-1))
+             (car (node-year node-2))))))
