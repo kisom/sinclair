@@ -177,7 +177,9 @@
                        :slug (key-from-node "slug" node)
                        :body (key-from-node "body" node)
                        :tags (key-from-node "tags" node)
-                       :mode (if (key-from-node "static" node) :page :post)
+                       :mode (if (equalp 
+                                  (key-from-node "static" node)
+                                  :TRUE) :page :post)
                        :date (unix-to-timestamp
                               (key-from-node "date" node))
                        :title (key-from-node "title" node)))))
