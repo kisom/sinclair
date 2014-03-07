@@ -14,6 +14,7 @@
 (defvar *koala-path* #P"/home/kyle/code/go/bin/koala")
 (defvar *dibbler-path* #P"/home/kyle/code/go/bin/dibbler")
 (defvar *md-extension* ".md")
+(defvar *sinclair-root* #P "/home/kyle/tmp/sinclair")
 
 
 ;;; utilities
@@ -303,3 +304,20 @@
               (node-date node-1))
              (local-time:timestamp-year
               (node-date node-2))))))
+
+(defun build-slug (node)
+  (if (equalp (node-mode node) :page)
+      (static-slug node)
+      (format nil "/blog/~A/~A/~A/~A"
+              (local-time:timestamp-year (node-date node))
+              (local-time:timestamp-month (node-date node))
+              (local-time:timestamp-day (node-date node))
+              (node-slug node))))
+
+(defun static-slug (node)
+  (let ((root-path (namestring *sinclair-root*)))
+      (if (zerop
+           (search root-path (node-path node)))
+          (subseq (node-path node-1) (length root-path))
+          nil)))
+
