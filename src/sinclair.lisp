@@ -224,7 +224,8 @@
                                   nil
                                   (tags-as-keywords
                                    (read-from-string tags))))
-                     :mode  (red-node-slot node-name "mode")
+                     :mode  (intern (red-node-slot node-name "mode")
+                                    "KEYWORD")
                      :date  (unix-to-timestamp
                              (red-node-slot node-name "date"))
                      :title (red-node-slot node-name "title"))))
