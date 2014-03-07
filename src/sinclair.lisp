@@ -158,6 +158,12 @@
     (if present
         value nil)))
 
+(defun unix-to-timestamp (timestamp)
+  (local-time:unix-to-timestamp
+   (if (numberp timestamp)
+       timestamp
+       (parse-integer timestamp))))
+
 (defun make-node (node)
   "Given a JSON representation of a node result container, process it into a node object."
   (let ((success (st-json:from-json-bool
@@ -165,13 +171,15 @@
     (if (not success)
         nil
         (make-instance 'node
-                       :mtime (key-from-node "mtime" node)
+                       :mtime (unix-to-timestamp
+                               (key-from-node "mtime" node))
                        :path (key-from-node "path" node)
                        :slug (key-from-node "slug" node)
                        :body (key-from-node "body" node)
                        :tags (key-from-node "tags" node)
                        :mode (if (key-from-node "static" node) :page :post)
-                       :date (key-from-node "date" node)
+                       :date (unix-to-timestamp
+                              (key-from-node "date" node))
                        :title (key-from-node "title" node)))))
 
 (defun red-node-slot (node-name slot-name)
@@ -190,16 +198,21 @@
           (mapcar #'string
                   tags)))
 
+(defun redis-name (path)
+  (concatenate 'string
+               "node-"
+               path))
+
 (defun load-node (path)
   "Load the node from Redis."
-  (let ((node-name (concatenate 'string "node-" path)))
-    (load-node-by-name node-name)))
+  (load-node-by-name (redis-name path)))
 
 (defun load-node-by-name (node-name)
   (if (not (redis:red-exists node-name))
       nil
       (make-instance 'node
-                     :mtime (red-node-slot node-name "mtime")
+                     :mtime (unix-to-timestamp
+                             (red-node-slot node-name "mtime"))
                      :path  (red-node-slot node-name "path")
                      :slug  (red-node-slot node-name "slug")
                      :body  (red-node-slot node-name "body")
@@ -209,15 +222,20 @@
                                   (tags-as-keywords
                                    (read-from-string tags))))
                      :mode  (red-node-slot node-name "mode")
-                     :date  (red-node-slot node-name "date")
+                     :date  (unix-to-timestamp
+                             (red-node-slot node-name "date"))
                      :title (red-node-slot node-name "title"))))
 
 (defun store-node-slot (node slot)
-  (redis:red-hset (concatenate 'string
-                            "node-"
-                            (node-path node))
+  (redis:red-hset (redis-name (node-path node))
                   (string-downcase (string slot))
                   (slot-value node slot)))
+
+(defun store-node-timestamp (node slot)
+  (redis:red-hset (redis-name (node-path node))
+                  (string-downcase (string slot))
+                  (local-time:timestamp-to-unix
+                   (slot-value node slot))))
 
 (defun store-node (node)
   "Store the node in Redis."
@@ -228,8 +246,8 @@
     (store-node-slot node 'body)
     (store-node-slot node 'tags)
     (store-node-slot node 'mode)
-    (store-node-slot node 'date)
-    (store-node-slot node 'mtime)))
+    (store-node-timestamp node 'date)
+    (store-node-timestamp node 'mtime)))
 
 (defun send-forth-minions (paths)
   "Send forth the minions who will seek out whom they may devour."
@@ -243,13 +261,12 @@
                                           (st-json:getjso "success" node)))
                                 node-json)))
       (list
-       :FAILED not-nodes
+       :ASSETS not-nodes
        :NODES (mapcar #'make-node node-json)))))
 
 (defun node-in-redis (path)
   "Predicate determining whether path is a valid node in redis."
-  (let ((node-name (concatenate 'string "node-" path)))
-    (redis:red-exists node-name)))
+  (redis:red-exists (redis-name path)))
 
 (defun get-mtime (path)
   "Retrieve the mtime for the path from disk, using dibbler."
@@ -276,17 +293,11 @@
         (let ((node (load-node path)))
           (> mtime (parse-integer (node-mtime node)))))))
 
-(defun node-year (node)
-  (cons
-   (funcall (compose #'local-time:timestamp-year
-                     #'local-time:unix-to-timestamp
-                     #'node-date)
-            node)
-   (node-path node)))
 
 (defun sort-by-year (node-list)
   (sort (copy-list node-list)
         (lambda (node-1 node-2)
-          (< (car (node-year node-1))
-             (car (node-year node-2))))))
-
+          (< (local-time:timestamp-year
+              (node-date node-1))
+             (local-time:timestamp-year
+              (node-date node-2))))))
