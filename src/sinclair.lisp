@@ -343,6 +343,7 @@
     (collect (copy-tree lst))))
 
 (defun sort-nodes-by-time (node-list)
+  "Sort the list of nodes in descending order by time."
   (labels ((node-year (node)
              (local-time:timestamp-to-unix
               (node-date node))))
@@ -352,11 +353,12 @@
                (node-year y))))))
 
 (defun group-nodes-by-year (node-list)
+  "Group nodes by their year in descending order."
   (let ((year-list (sort
                     (mapcar (compose #'local-time:timestamp-year
                                      #'node-date)
                             node-list)
-                    #'<)))
+                    #'>)))
     (labels ((filter-by-year (year)
                (sort-nodes-by-time
                 (remove-if (compose #'not
