@@ -28,6 +28,8 @@
                     :initial-value (apply fn1 args))))
       #'identity))
 
+(defun to-keyword (sym)
+  (intern (string sym) "KEYWORD"))
 
 ;;; start up actions
 
@@ -191,9 +193,7 @@
 
 (defun tags-as-keywords (tags)
   "Convert a list of tag symbols to keywords"
-  (mapcar (lambda (s)
-            (intern s "KEYWORD"))
-          (mapcar #'string tags)))
+  (mapcar #'to-keyword (mapcar #'string tags)))
 
 (defun tags-as-strings (tags)
   "Convert a list of tag keywords to strings"
@@ -224,8 +224,7 @@
                                   nil
                                   (tags-as-keywords
                                    (read-from-string tags))))
-                     :mode  (intern (red-node-slot node-name "mode")
-                                    "KEYWORD")
+                     :mode  (to-keyword(red-node-slot node-name "mode"))
                      :date  (unix-to-timestamp
                              (red-node-slot node-name "date"))
                      :title (red-node-slot node-name "title"))))
@@ -322,3 +321,50 @@
           (subseq (node-path node-1) (length root-path))
           nil)))
 
+(defun filter-pages (node-list)
+  "Filter out pages from the list of nodes."
+  (remove-if (lambda (node)
+               (equal (node-mode node) :page))
+             node-list))
+
+(defun unique-list (lst)
+  "Given a sort list, returns the list as a set."
+  (labels ((skip (skip-lst)
+             (if (equal (first skip-lst)
+                        (second skip-lst))
+                 (skip (cdr skip-lst))
+                 (if (null skip-lst)
+                    nil
+                    (cdr skip-lst))))
+           (collect (skip-lst)
+             (if (null skip-lst)
+                 nil
+                 (cons (car skip-lst) (collect (skip skip-lst))))))
+    (collect (copy-tree lst))))
+
+(defun sort-nodes-by-time (node-list)
+  (labels ((node-year (node)
+             (local-time:timestamp-to-unix
+              (node-date node))))
+    (sort node-list
+          (lambda (x y)
+            (> (node-year x)
+               (node-year y))))))
+
+(defun group-nodes-by-year (node-list)
+  (let ((year-list (sort
+                    (mapcar (compose #'local-time:timestamp-year
+                                     #'node-date)
+                            node-list)
+                    #'<)))
+    (labels ((filter-by-year (year)
+               (sort-nodes-by-time
+                (remove-if (compose #'not
+                                    (lambda (node-year) (equal node-year year))
+                                    #'local-time:timestamp-year
+                                    #'node-date)
+                           node-list))))
+      (mapcar (lambda (year)
+                (list :year year
+                      :nodes (filter-by-year year)))
+              (unique-list year-list)))))
