@@ -51,7 +51,9 @@
 
 ;;; start up actions
 
-(defun startup ()
+(defun startup (&keys (:mode :dev))
+  (when (equal :mode :prod)
+    (swank-server))
   (key-store-setup))
 
 (defun key-store-setup ()
