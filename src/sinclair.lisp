@@ -368,6 +368,10 @@
                  (cons (car skip-lst) (collect (skip skip-lst))))))
     (collect (copy-tree lst))))
 
+(defun load-all-nodes-from-redis ()
+  (mapcar #'load-node
+          (redis:red-keys "node-*")))
+
 (defun sort-nodes-by-time (node-list)
   "Sort the list of nodes in descending order by time."
   (labels ((node-year (node)
@@ -396,3 +400,36 @@
                 (list :year year
                       :nodes (filter-by-year year)))
               (unique-list year-list)))))
+
+(defmacro generate-index (title styles header)
+  `(cl-who:with-html-output-to-string (s nil :prologue :html :indent t)
+     (:html
+      (:head
+       (:title ,title)
+       (:meta :charset "UTF-8")
+       ,@(mapcar (lambda (style)
+                   `(:link :type "text/css"
+                           :rel "stylesheet"
+                           :href ,style))
+                 styles))
+      (:body
+       (:div :id "container"
+             (:div :id "header"
+                   ,(if header header ""))
+             (:div :id "content"
+                   (:h2 "Index")
+                   ,@(mapcar #'index-for-year
+                             (group-nodes-by-year
+                              (filter-pages
+                               (mapcar #'load-node-by-name
+                                       (redis:red-keys "node-*")))))))))))
+
+(defun index-for-year (nodes)
+  `(:h3 ,(getf nodes :year)
+        (:ul
+         ,@(mapcar (lambda (node)
+                    `(:li (:a :href ,(build-slug node)
+                              ,(format nil "~A: ~A"
+                                      (pretty-node-date node)
+                                      (node-title node)))))
+                  (getf nodes :nodes)))))
