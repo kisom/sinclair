@@ -4,8 +4,8 @@
 |#
 
 (in-package :cl-user)
-(defpackage sinclair
-  (:use :cl))
+(restas:define-module #:sinclair
+  (:use #:cl #:restas))
 (in-package :sinclair)
 
 ;; Hacks and glory await!
