@@ -402,28 +402,28 @@
               (unique-list year-list)))))
 
 (defmacro generate-index ()
-  `(string-trim *trailing-whitespace*
-    (cl-who:with-html-output-to-string (s nil :prologue :html :indent t)
-      (:html
-       (:head
-        (:title ,(redis:red-hget "sinclair" :title))
-        (:meta :charset "UTF-8")
-        ,@(mapcar (lambda (style)
-                    `(:link :type "text/css"
-                            :rel "stylesheet"
-                            :href ,style))
-                  (read-from-string (load-stylesheets))))
-       (:body
-        (:div :id "container"
-              (:div :id "header"
-                    ,(if (load-header) (load-header) ""))
-              (:div :id "content"
-                    (:h2 "Index")
-                    ,@(mapcar #'index-for-year
-                              (group-nodes-by-year
-                               (filter-pages
-                                (mapcar #'load-node-by-name
-                                       (redis:red-keys "node-*"))))))))))))
+  `(lambda ()
+    (string-trim *trailing-whitespace*
+                  (cl-who:with-html-output-to-string (s nil :prologue :html :indent t)
+                    (:html
+                     (:head
+                      (:title ,(redis:red-hget "sinclair" :title))
+                      (:meta :charset "UTF-8")
+                      ,@(mapcar (lambda (style)
+                                  `(:link :type "text/css"
+                                          :rel "stylesheet"
+                                          :href ,style))
+                                (read-from-string (load-stylesheets))))
+                     (:body
+                      (:div :id "container"
+                            (if (load-header) (load-header) nil)
+                            (:div :id "content"
+                                  (:h2 "Index")
+                                  ,@(mapcar #'index-for-year
+                                            (group-nodes-by-year
+                                             (filter-pages
+                                              (mapcar #'load-node-by-name
+                                                      (redis:red-keys "node-*")))))))))))))
 
 (defun index-for-year (nodes)
   (let ((year (format nil "~A" (getf nodes :year))))
@@ -437,6 +437,13 @@
                                                 (node-title node)))))
                       (getf nodes :nodes))))))
 
+(defun update-header (&rest forms)
+  (redis:red-hset "sinclair" :header
+                  (string-trim *trailing-whitespace*
+                               (with-output-to-string (s)
+                                 (print `(:div :id "header"
+                                               ,@forms) s)))))
+
 (defun load-header ()
   (redis:red-hget "sinclair" :header))
 
@@ -444,4 +451,42 @@
   (redis:red-hget "sinclair" :styles))
 
 (restas:define-route index-route ("/" :method :get)
-  (generate-index))
+  (funcall (generate-index)))
+
+(defun intern-string (s)
+  (intern (string-upcase s)))
+
+(defmacro invalidate-route (route-name route-url)
+  `(restas:define-route ,route-name (,route-url)
+     (restas:redirect 'index-route)))
+
+(defmacro generate-node-post-route (node)
+  (eval
+   `(let ((slug (build-slug ,node)))
+      `(define-route (intern (string-upcase (node-slug ,,node)))
+           `(slug :method :get)
+         (string-trim *trailing-whitespace*
+                      (cl-who:with-html-output-to-string (s nil :prologue :html :indent t)
+                        (:html
+                         (:head
+                          (:title ,(redis:red-hget "sinclair" :title))
+                          (:meta :charset "UTF-8")
+                          ,@(mapcar (lambda (style)
+                                      `(:link :type "text/css"
+                                              :rel "stylesheet"
+                                              :href ,style))
+                                    (read-from-string (load-stylesheets))))
+                         (:body
+                          (:div :id "container"
+                                (:div :id "header"
+                                      ,(if (load-header) (load-header) ""))
+                                (:div :id "content"
+                                      (:h2 (node-title ,,node))
+                                      (:h4 Published (pretty-node-date ,,node))
+                                      (:div :id "post-body"
+                                            (node-body ,,node))))))))))))
+
+(defun clear-nodes (node-list)
+  (dolist (node node-list)
+    (invalidate-route (intern-string (node-slug node))
+                      (build-slug (node-slug)))))
