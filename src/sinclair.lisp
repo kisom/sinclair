@@ -15,6 +15,7 @@
 (defvar *dibbler-path* #P"/home/kyle/code/go/bin/dibbler")
 (defvar *md-extension* ".md")
 (defvar *sinclair-root* #P "/home/kyle/tmp/sinclair")
+(defvar *pretty-date-format* '((:year 4 ) "-" (:month 2) "-" (:day 2)))
 
 
 ;;; utilities
@@ -206,6 +207,10 @@
                        :date (unix-to-timestamp
                               (key-from-node "date" node))
                        :title (key-from-node "title" node)))))
+
+(defun pretty-node-date (node)
+  (local-time:format-timestring nil (node-date node)
+                                :format *pretty-date-format*))
 
 (defun red-node-slot (node-name slot-name)
   "Retrieve the slot value from redis for the given node."
