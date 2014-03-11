@@ -31,6 +31,24 @@
 (defun to-keyword (sym)
   (intern (string sym) "KEYWORD"))
 
+(defun setup-swank (&key (port 4006))
+  "Setup a swank server in the running process."
+  (let ((swank-runningp nil))
+    (labels ((fn ()
+                 (progn
+                   (if swank-runningp
+                       (progn
+                         (format t "Stopping swank server...~%")
+                         (swank:stop-server port)
+                         (setf swank-runningp nil))
+                       (progn
+                         (format t "Starting swank server...~%")
+                         (swank:create-server :port port :dont-close t)
+                         (setf swank-runningp t)))
+                   swank-runningp)))
+      (setf (symbol-function 'setup-swank) #'fn)
+      (setup-swank))))
+
 ;;; start up actions
 
 (defun startup ()
