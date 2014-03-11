@@ -369,7 +369,7 @@
     (collect (copy-tree lst))))
 
 (defun load-all-nodes-from-redis ()
-  (mapcar #'load-node
+  (mapcar #'load-node-by-name
           (redis:red-keys "node-*")))
 
 (defun sort-nodes-by-time (node-list)
