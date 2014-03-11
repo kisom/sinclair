@@ -218,7 +218,8 @@
 
 (defun tags-as-keywords (tags)
   "Convert a list of tag symbols to keywords"
-  (mapcar #'to-keyword (mapcar #'string tags)))
+  (when (listp tags)
+      (mapcar #'to-keyword (mapcar #'string tags))))
 
 (defun tags-as-strings (tags)
   "Convert a list of tag keywords to strings"
