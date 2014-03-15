@@ -27,7 +27,9 @@
                :swank)
   :components ((:module "src"
                 :components
-                ((:file "sinclair"))))
+                ((:file "sinclair")
+                 (:file "routes")
+                 (:file "util"))))
   :description "Simple blog engine"
   :long-description
   #.(with-open-file (stream (merge-pathnames
