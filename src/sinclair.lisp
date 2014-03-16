@@ -5,7 +5,16 @@
 
 (in-package :cl-user)
 (restas:define-module #:sinclair
-  (:use #:cl #:restas))
+  (:use #:cl #:restas #:sexml))
+
+(progn
+  (sexml:with-compiletime-active-layers
+      (sexml:standard-sexml sexml:xml-doctype)
+    (sexml:support-dtd
+     (merge-pathnames "html5.dtd" (asdf:system-source-directory "sexml"))
+     :<))
+  (<:augment-with-doctype "html" ""))
+
 (in-package :sinclair)
 
 ;; Hacks and glory await!
@@ -17,22 +26,16 @@
 (defvar *sinclair-root* #P "/home/kyle/tmp/sinclair")
 (defvar *pretty-date-format* '((:year 4 ) "-" (:month 2) "-" (:day 2)))
 
+(defvar *node-store* (make-hash-table :test #'equal))
+(defvar *asset-store* (make-hash-table :test #'equal))
+(defvar *site-config* (make-hash-table))
 
 ;;; utilities
-(defun compose (&rest fns)
-  (if fns
-      (let ((fn1 (car (last fns)))
-            (fns (butlast fns)))
-        #'(lambda (&rest args)
-            (reduce #'funcall fns
-                    :from-end t
-                    :initial-value (apply fn1 args))))
-      #'identity))
 
 (defun to-keyword (sym)
   (intern (string sym) "KEYWORD"))
 
-(defun setup-swank (&key (port 4006))
+(defun toggle-swank (&key (port 4006))
   "Setup a swank server in the running process."
   (let ((swank-runningp nil))
     (labels ((fn ()
@@ -52,13 +55,15 @@
 
 ;;; start up actions
 
-(defun startup (&keys (:mode :dev))
-  (when (equal :mode :prod)
-    (swank-server))
-  (key-store-setup))
-
-(defun key-store-setup ()
-  (redis:connect))
+(defun startup (&key (mode :dev) (port 8080))
+  (when (equal mode :prod)
+    (progn
+      (restas:debug-mode-off)
+      (toggle-swank))
+    (progn
+      (restas:debug-mode-on)))
+  (reload-all-posts :from-disk t)
+  (restas:start '#:sinclair :port port))
 
 ;;; node scanning
 
@@ -73,29 +78,6 @@
            (sb-ext:run-program *koala-path*
                                `("-s" "-o" "lisp" ,(namestring path))
                         :output stream))))))
-
-(defun file-string (path)
-  "Read an entire file into a string buffer."
-  (with-open-file (stream path)
-    (let ((data (make-string (file-length stream))))
-      (read-sequence data stream)
-      data)))
-
-(defun ends-with (filename extension)
-  "Predicate that returns true if the filename ends with the extension."
-  (let ((filename (if (pathnamep filename)
-                      (namestring filename)
-                      filename)))
-    (let ((name-length (length filename)))
-      (if (< name-length (+ (length extension) 1))
-          nil
-          (let ((start-pos
-                 (- name-length
-                    (length extension))))
-            (if (equalp (subseq filename start-pos)
-                        extension)
-                t
-                nil))))))
 
 (defun dibbler-load-nodes (paths)
   "Dispatch dibbler to proceess the files listed. Returns an ST-JSON structure with the results."
@@ -182,12 +164,6 @@
     (if present
         value nil)))
 
-(defun unix-to-timestamp (timestamp)
-  (local-time:unix-to-timestamp
-   (if (numberp timestamp)
-       timestamp
-       (parse-integer timestamp))))
-
 (defun make-node (node)
   "Given a JSON representation of a node result container, process it into a node object."
   (let ((success (st-json:from-json-bool
@@ -212,71 +188,15 @@
   (local-time:format-timestring nil (node-date node)
                                 :format *pretty-date-format*))
 
-(defun red-node-slot (node-name slot-name)
-  "Retrieve the slot value from redis for the given node."
-  (redis:red-hget node-name slot-name))
-
-(defun tags-as-keywords (tags)
-  "Convert a list of tag symbols to keywords"
-  (when (listp tags)
-      (mapcar #'to-keyword (mapcar #'string tags))))
-
-(defun tags-as-strings (tags)
-  "Convert a list of tag keywords to strings"
-  (mapcar #'string-downcase
-          (mapcar #'string
-                  tags)))
-
-(defun redis-name (path)
-  (concatenate 'string
-               "node-"
-               path))
-
 (defun load-node (path)
-  "Load the node from Redis."
-  (load-node-by-name (redis-name path)))
-
-(defun load-node-by-name (node-name)
-  (if (not (redis:red-exists node-name))
-      nil
-      (make-instance 'node
-                     :mtime (unix-to-timestamp
-                             (red-node-slot node-name "mtime"))
-                     :path  (red-node-slot node-name "path")
-                     :slug  (red-node-slot node-name "slug")
-                     :body  (red-node-slot node-name "body")
-                     :tags  (let ((tags (red-node-slot node-name "tags")))
-                              (if (null tags)
-                                  nil
-                                  (tags-as-keywords
-                                   (read-from-string tags))))
-                     :mode  (to-keyword(red-node-slot node-name "mode"))
-                     :date  (unix-to-timestamp
-                             (red-node-slot node-name "date"))
-                     :title (red-node-slot node-name "title"))))
-
-(defun store-node-slot (node slot)
-  (redis:red-hset (redis-name (node-path node))
-                  (string-downcase (string slot))
-                  (slot-value node slot)))
-
-(defun store-node-timestamp (node slot)
-  (redis:red-hset (redis-name (node-path node))
-                  (string-downcase (string slot))
-                  (local-time:timestamp-to-unix
-                   (slot-value node slot))))
+  "Load the node from the store."
+  (multiple-value-bind (node present) (gethash path *node-store*)
+    (when present
+      node)))
 
 (defun store-node (node)
-  "Store the node in Redis."
-  (progn
-    (store-node-slot node 'title)
-    (store-node-slot node 'path)
-    (store-node-slot node 'slug)
-    (store-node-slot node 'body)
-    (store-node-slot node 'tags)
-    (store-node-slot node 'mode)
-    (store-node-timestamp node 'date)
-    (store-node-timestamp node 'mtime)))
+  "Store the node in the store"
+  (setf (gethash (node-path node) *node-store*) node))
 
 (defun send-forth-minions (paths)
   "Send forth the minions who will seek out whom they may devour."
@@ -293,9 +213,9 @@
        :ASSETS not-nodes
        :NODES (mapcar #'make-node node-json)))))
 
-(defun node-in-redis (path)
-  "Predicate determining whether path is a valid node in redis."
-  (redis:red-exists (redis-name path)))
+(defun node-in-store (path)
+  "Predicate determining whether path is a valid node in the store."
+  (nth-value 1 (getf path *node-store*)))
 
 (defun get-mtime (path)
   "Retrieve the mtime for the path from disk, using dibbler."
@@ -318,10 +238,10 @@
   "Predicate returning T if a node should update itself."
   (let ((mtime (get-mtime path)))
     (or (null mtime)
-        (not (node-in-redis path))
+        (not (node-in-store path))
         (let ((node (load-node path)))
-          (> mtime (parse-integer (node-mtime node)))))))
-
+          (> mtime 
+             (local-time:timestamp-to-unix (node-mtime node)))))))
 
 (defun sort-by-year (node-list)
   (sort (copy-list node-list)
@@ -344,7 +264,7 @@
   (let ((root-path (namestring *sinclair-root*)))
       (if (zerop
            (search root-path (node-path node)))
-          (subseq (node-path node-1) (length root-path))
+          (subseq (node-path node) (length root-path))
           nil)))
 
 (defun filter-pages (node-list)
@@ -368,9 +288,9 @@
                  (cons (car skip-lst) (collect (skip skip-lst))))))
     (collect (copy-tree lst))))
 
-(defun load-all-nodes-from-redis ()
-  (mapcar #'load-node-by-name
-          (redis:red-keys "node-*")))
+(defun load-all-nodes ()
+  (mapcar #'load-node
+          (loop for key being the hash-keys of *node-store* collecting key)))
 
 (defun sort-nodes-by-time (node-list)
   "Sort the list of nodes in descending order by time."
@@ -403,42 +323,40 @@
 
 (defun index-for-year (nodes)
   (let ((year (format nil "~A" (getf nodes :year))))
-    `(:div :class "year-group"
-           (:h3 ,year)
-           (:ul
-            ,@(mapcar (lambda (node)
-                        `(:li (:a :href ,(build-slug node)
-                                       ,(format nil "~A: ~A"
+    (<:div :class "year-group"
+           (<:h3 year)
+           (<:ul
+            (mapcar (lambda (node)
+                        (<:li (<:a :href (build-slug node)
+                                       (format nil "~A: ~A"
                                                 (pretty-node-date node)
                                                 (node-title node)))))
                       (getf nodes :nodes))))))
 
 (defun update-header (&rest forms)
-  (redis:red-hset "sinclair" :header
-                  (string-trim *trailing-whitespace*
-                               (with-output-to-string (s)
-                                 (print `(:div :id "header"
-                                               ,@forms) s)))))
+  (setf (gethash :header *site-config*)
+        (<:div :id "header" forms)))
 
 (defun load-header ()
-  (read-from-string
-   (redis:red-hget "sinclair" :header)))
+  (let ((header (gethash :header *site-config*)))
+    (if header
+        header
+        (<:div :id "header"))))
 
 (defun load-stylesheets ()
-  (redis:red-hget "sinclair" :styles))
-
-(restas:define-route index-route ("/" :method :get)
-  (let ((header-fragment (load-header)))
-    (generate-index header-fragment)))
+  (let ((styles (gethash :styles *site-config*)))
+    (if styles
+        styles
+        '())))
 
 (defun intern-string (s)
   (intern (string-upcase s)))
 
-(defmacro invalidate-route (route-name route-url)
-  `(restas:define-route ,route-name (,route-url)
-     (restas:redirect 'index-route)))
-
-(defun clear-nodes (node-list)
-  (dolist (node node-list)
-    (invalidate-route (intern-string (node-slug node))
-                      (build-slug (node-slug)))))
+(defun sanitize-static-slug (slug)
+  (map 'string
+       (lambda (c)
+         (if (or (equal c #\/)
+                 (equal c #\.))
+             #\-
+             c))
+       slug))

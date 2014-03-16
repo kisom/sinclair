@@ -18,9 +18,8 @@
   :version "0.1"
   :author "K. Isom"
   :license "ISC"
-  :depends-on (:cl-markdown
-               :cl-redis
-               :cl-who
+  :depends-on (:sexml
+               :cl-markdown
                :local-time
                :restas
                :st-json
@@ -29,7 +28,8 @@
                 :components
                 ((:file "sinclair")
                  (:file "routes")
-                 (:file "util"))))
+                 ;(:file "util")
+                 )))
   :description "Simple blog engine"
   :long-description
   #.(with-open-file (stream (merge-pathnames
