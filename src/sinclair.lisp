@@ -62,6 +62,7 @@
       (toggle-swank))
     (progn
       (restas:debug-mode-on)))
+  (update-header (default-header))
   (reload-all-posts :from-disk t)
   (restas:start '#:sinclair :port port))
 
@@ -263,8 +264,12 @@
 (defun static-slug (node)
   (let ((root-path (namestring *sinclair-root*)))
       (if (zerop
-           (search root-path (node-path node)))
-          (subseq (node-path node) (length root-path))
+         (search root-path (node-path node)))
+          (let ((slug (subseq (node-path node)
+                              (length root-path))))
+            (if (equal (pathname-name slug) "index")
+                (format nil "/~{~A/~}" (cdr (pathname-directory slug)))
+                slug))
           nil)))
 
 (defun filter-pages (node-list)
@@ -360,3 +365,13 @@
              #\-
              c))
        slug))
+
+(defun default-header ()
+  (list
+   (<:h2 "metacircular")
+   (<:div :id "root-link" (<:a :href "/" "Return to top-level"))
+   (<:ul
+    (<:li (<:a :href "http://kyleisom.net/" "Homepage"))
+    (<:li (<:a :href "https://twitter.com/kyleisom" "Twitter"))
+    (<:li (<:a :href "https://github.com/kisom/" "Github"))
+    (<:li (<:a :href "https://bitbucket.org/kisom/" "Bitbucket")))))
