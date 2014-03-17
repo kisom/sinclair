@@ -22,7 +22,7 @@
 (defvar *koala-path* #P"/home/kyle/go/bin/koala")
 (defvar *dibbler-path* #P"/home/kyle/go/bin/dibbler")
 (defvar *md-extension* ".md")
-(defvar *sinclair-root* #P "/home/kyle/tmp/sinclair")
+(defvar *sinclair-root* #P "/home/kyle/sites/sinclair")
 (defvar *pretty-date-format* '((:year 4 ) "-" (:month 2) "-" (:day 2)))
 
 (defvar *node-store* (make-hash-table :test #'equal))
