@@ -370,6 +370,7 @@
    (<:h2 "metacircular")
    (<:div :id "root-link" (<:a :href "/" "Return to top-level"))
    (<:ul
+    (<:li (<:a :href "/about/" "About"))
     (<:li (<:a :href "http://kyleisom.net/" "Homepage"))
     (<:li (<:a :href "https://twitter.com/kyleisom" "Twitter"))
     (<:li (<:a :href "https://github.com/kisom/" "Github"))
