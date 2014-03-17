@@ -75,8 +75,7 @@
             (load-stylesheets)))
    (<:body
     (<:div :id "container"
-           (<:div :id "header"
-                  (load-header))
+           (load-header)
            (<:div :id "content"
                   (<:h2 (node-title node))
                   (<:h4 "Published: " (pretty-node-date node))
@@ -96,8 +95,7 @@
             (load-stylesheets)))
    (<:body
     (<:div :id "container"
-           (<:div :id "header"
-                  (load-header))
+           (load-header)
            (<:div :id "content"
                   (<:h2 (node-title node))
                   (<:div :id "post-body"
