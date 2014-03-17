@@ -101,9 +101,12 @@
                   (<:div :id "post-body"
                          (node-body node)))))))
 
-(defun reload-all-posts (&key (from-disk nil))
+(defun reload-site (&key (from-disk nil))
   (when from-disk
-    (mapcar #'store-node
-            (getf (send-forth-minions *sinclair-root*) :nodes)))
+    (let ((node-list (send-forth-minions *sinclair-root*)))
+        (mapcar #'store-node
+                (getf node-list :nodes))
+        (mapcar #'build-asset-route
+                (getf node-list :assets))))
   (mapcar #'build-route
           (load-all-nodes)))

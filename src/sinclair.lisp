@@ -62,7 +62,7 @@
     (progn
       (restas:debug-mode-on)))
   (update-header (default-header))
-  (reload-all-posts :from-disk t)
+  (reload-site :from-disk t)
   (restas:start '#:sinclair :port port))
 
 ;;; node scanning
