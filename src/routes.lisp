@@ -79,7 +79,7 @@
            (<:div :id "content"
                   (<:h2 (node-title node))
                   (<:h4 "Published: " (pretty-node-date node))
-                  (<:h4 "Tags:" (format nil "~{ ~A,~}" (node-tags node)))
+                  (<:h4 "Tags:" (format nil "~{ ~A~^,~}" (node-tags node)))
                   (<:div :id "post-body"
                          (node-body node)))))))
 
