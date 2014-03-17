@@ -28,8 +28,7 @@
                 :components
                 ((:file "sinclair")
                  (:file "routes")
-                 ;(:file "util")
-                 )))
+                 (:file "util"))))
   :description "Simple blog engine"
   :long-description
   #.(with-open-file (stream (merge-pathnames

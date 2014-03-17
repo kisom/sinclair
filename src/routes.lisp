@@ -4,9 +4,9 @@
 
 (defmacro load-and-index-nodes-by-year ()
   `(mapcar #'index-for-year
-          (group-nodes-by-year
-           (filter-pages
-            (load-all-nodes)))))
+           (group-nodes-by-year
+            (filter-pages
+             (load-all-nodes)))))
 
 (defmacro invalidate-route (route-name route-url)
   `(restas:define-route ,route-name (,route-url)
