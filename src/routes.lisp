@@ -51,28 +51,38 @@
                         (sanitize-static-slug route-path))))
       (eval
        `(restas:define-route ,route-name (,route-path)
-          (show-node-page ,node)))))
+          (show-node-page ,node))))))
 
-  (defun show-node-post (node)
-    (<:html
-     (<:head
-      (<:title (node-title node))
-      (<:meta :charset "UTF-8")
-      (mapcar (lambda (style)
-                (<:link :type "text/css"
-                        :rel "stylesheet"
-                        :href style))
-              (load-stylesheets)))
-     (<:body
-      (<:div :id "container"
-             (<:div :id "header"
-                    (load-header))
-             (<:div :id "content"
-                    (<:h2 (node-title node))
-                    (<:h4 "Published: " (pretty-node-date node))
-                    (<:h4 "Tags:" (format nil "~{ ~A,~}" (node-tags node)))
-                    (<:div :id "post-body"
-                           (node-body node))))))))
+(defun build-asset-route (path)
+  (when path
+    (let* ((route-path (strip-prefix (namestring path)
+                                     (namestring *sinclair-root*)))
+           (route-name (intern-string
+                        (sanitize-static-slug route-path))))
+      (eval
+       `(restas:define-route ,route-name (,route-path)
+          (file-string ,path))))))
+
+(defun show-node-post (node)
+  (<:html
+   (<:head
+    (<:title (node-title node))
+    (<:meta :charset "UTF-8")
+    (mapcar (lambda (style)
+              (<:link :type "text/css"
+                      :rel "stylesheet"
+                      :href style))
+            (load-stylesheets)))
+   (<:body
+    (<:div :id "container"
+           (<:div :id "header"
+                  (load-header))
+           (<:div :id "content"
+                  (<:h2 (node-title node))
+                  (<:h4 "Published: " (pretty-node-date node))
+                  (<:h4 "Tags:" (format nil "~{ ~A,~}" (node-tags node)))
+                  (<:div :id "post-body"
+                         (node-body node)))))))
 
 (defun show-node-page (node)
   (<:html

@@ -26,7 +26,7 @@
 (defvar *pretty-date-format* '((:year 4 ) "-" (:month 2) "-" (:day 2)))
 
 (defvar *node-store* (make-hash-table :test #'equal))
-(defvar *asset-store* (make-hash-table :test #'equal))
+(defvar *asset-store* '())
 (defvar *site-config* (make-hash-table))
 
 ;;; utilities
@@ -259,6 +259,11 @@
               (local-time:timestamp-month (node-date node))
               (local-time:timestamp-day (node-date node))
               (node-slug node))))
+
+(defun strip-prefix (s prefix)
+  (if (zerop (search prefix s))
+      (subseq s (length prefix))
+      s))
 
 (defun static-slug (node)
   (let ((root-path (namestring *sinclair-root*)))
