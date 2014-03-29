@@ -22,7 +22,7 @@
 (defvar *koala-path* #P"/home/kyle/go/bin/koala")
 (defvar *dibbler-path* #P"/home/kyle/go/bin/dibbler")
 (defvar *md-extension* ".md")
-(defvar *sinclair-root* #P "/home/kyle/sites/sinclair")
+(defvar *sinclair-root* #P "/home/kyle/code/sites/sinclair")
 (defvar *pretty-date-format* '((:year 4 ) "-" (:month 2) "-" (:day 2)))
 
 (defvar *node-store* (make-hash-table :test 'equal))
@@ -55,13 +55,14 @@
 ;;; start up actions
 
 (defun startup (&key (mode :dev) (port 8080))
-  (when (equal mode :prod)
+  (if (equal mode :prod)
     (progn
       (restas:debug-mode-off)
       (toggle-swank))
     (progn
       (restas:debug-mode-on)))
   (update-header (default-header))
+  (update-stylesheets (default-stylesheets))
   (reload-site :from-disk t)
   (restas:start '#:sinclair :port port))
 
@@ -346,6 +347,9 @@
   (setf (gethash :header *site-config*)
         (<:div :id "header" forms)))
 
+(defun update-stylesheets (stylesheets)
+  (setf (gethash :styles *site-config*) stylesheets))
+
 (defun load-header ()
   (let ((header (gethash :header *site-config*)))
     (if header
@@ -380,3 +384,11 @@
     (<:li (<:a :href "https://twitter.com/kyleisom" "Twitter"))
     (<:li (<:a :href "https://github.com/kisom/" "Github"))
     (<:li (<:a :href "https://bitbucket.org/kisom/" "Bitbucket")))))
+
+(defun default-stylesheets ()
+  (list "/styles/styles.css"))
+
+(defun load-fonts ()
+  (list
+"<link href='http://fonts.googleapis.com/css?family=Habibi|Alegreya+SC' rel='stylesheet' type='text/css'>"
+))

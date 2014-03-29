@@ -17,6 +17,7 @@
    (<:head
     (<:title (or (gethash :title *site-config*) ""))
     (<:meta :charset "UTF-8")
+    (load-fonts)
     (mapcar (lambda (style)
               (<:link :type "text/css"
                       :rel "stylesheet"
@@ -58,9 +59,14 @@
     (let* ((route-path (strip-prefix (namestring path)
                                      (namestring *sinclair-root*)))
            (route-name (intern-string
-                        (sanitize-static-slug route-path))))
+                        (sanitize-static-slug route-path)))
+           (content-type (if (ends-with path ".css")
+                             "text/css"
+                             "application/octet-stream")))
+
       (eval
-       `(restas:define-route ,route-name (,route-path)
+       `(restas:define-route ,route-name (,route-path :method :get 
+                                                      :content-type ,content-type)
           (file-string ,path))))))
 
 (defun show-node-post (node)
@@ -68,6 +74,7 @@
    (<:head
     (<:title (node-title node))
     (<:meta :charset "UTF-8")
+    (load-fonts)
     (mapcar (lambda (style)
               (<:link :type "text/css"
                       :rel "stylesheet"
@@ -88,6 +95,7 @@
    (<:head
     (<:title (node-title node))
     (<:meta :charset "UTF-8")
+    (load-fonts)
     (mapcar (lambda (style)
               (<:link :type "text/css"
                       :rel "stylesheet"
