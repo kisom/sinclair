@@ -386,9 +386,17 @@
     (<:li (<:a :href "https://bitbucket.org/kisom/" "Bitbucket")))))
 
 (defun default-stylesheets ()
-  (list "/styles/styles.css"))
+  (list "/styles/styles.css"
+        "http://fonts.googleapis.com/css?family=Habibi|Alegreya+SC"))
 
-(defun load-fonts ()
-  (list
-"<link href='http://fonts.googleapis.com/css?family=Habibi|Alegreya+SC' rel='stylesheet' type='text/css'>"
-))
+(defun rss-feed ()
+  (labels ((rss-item (node)
+             (xml-emitter:rss-item (node-title node) 
+                                   :link (concatenate 'string "http://metacircular.net"
+                                                 (build-slug node))
+                                   :author "Kyle Isom"
+                                   :description (node-body node))))
+    (with-output-to-string (s)
+      (xml-emitter:with-rss2 (s :encoding "UTF-8")
+        (xml-emitter:rss-channel-header "Metacircular" "http://metacircular.net/")
+        (mapcar #'rss-item (filter-pages (sort-nodes-by-time (load-all-nodes))))))))

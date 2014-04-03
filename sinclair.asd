@@ -23,7 +23,8 @@
                :local-time
                :restas
                :st-json
-               :swank)
+               :swank
+               :xml-emitter)
   :components ((:module "src"
                 :components
                 ((:file "sinclair")

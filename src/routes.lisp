@@ -13,22 +13,26 @@
      (restas:redirect 'index-route)))
 
 (restas:define-route index-route ("/" :method :get)
-  (<:html
-   (<:head
-    (<:title (or (gethash :title *site-config*) ""))
-    (<:meta :charset "UTF-8")
-    (load-fonts)
-    (mapcar (lambda (style)
-              (<:link :type "text/css"
-                      :rel "stylesheet"
-                      :href style))
-            (load-stylesheets)))
-   (<:body
-    (<:div :id "container"
-           (load-header)
-           (<:div :id "content"
-                  (<:h2 "Table of Contents")
-                  (load-and-index-nodes-by-year))))))
+  (concatenate 'string
+               (<:doctype)
+               (<:html
+                (<:head
+                 (<:title (or (gethash :title *site-config*) ""))
+                 (<:meta :charset "UTF-8")
+                 (mapcar (lambda (style)
+                           (<:link :type "text/css"
+                                   :rel "stylesheet"
+                                   :href style))
+                         (load-stylesheets)))
+                (<:body
+                 (<:div :id "container"
+                        (load-header)
+                        (<:div :id "content"
+                               (<:h2 "Table of Contents")
+                               (load-and-index-nodes-by-year)))))))
+
+(restas:define-route blog-rss ("/index.rss" :method :get)
+  (rss-feed))
 
 (defun build-route (node)
   (when node
@@ -70,44 +74,46 @@
           (file-string ,path))))))
 
 (defun show-node-post (node)
-  (<:html
-   (<:head
-    (<:title (node-title node))
-    (<:meta :charset "UTF-8")
-    (load-fonts)
-    (mapcar (lambda (style)
-              (<:link :type "text/css"
-                      :rel "stylesheet"
-                      :href style))
-            (load-stylesheets)))
-   (<:body
-    (<:div :id "container"
-           (load-header)
-           (<:div :id "content"
-                  (<:h2 (node-title node))
-                  (<:h4 "Published: " (pretty-node-date node))
-                  (<:h4 "Tags:" (format nil "~{ ~A~^,~}" (node-tags node)))
-                  (<:div :id "post-body"
-                         (node-body node)))))))
+  (concatenate 'string
+               (<:doctype)
+               (<:html
+                (<:head
+                 (<:title (node-title node))
+                 (<:meta :charset "UTF-8")
+                 (mapcar (lambda (style)
+                           (<:link :type "text/css"
+                                   :rel "stylesheet"
+                                   :href style))
+                         (load-stylesheets)))
+                (<:body
+                 (<:div :id "container"
+                        (load-header)
+                        (<:div :id "content"
+                               (<:h2 (node-title node))
+                               (<:h4 "Published: " (pretty-node-date node))
+                               (<:h4 "Tags:" (format nil "~{ ~A~^,~}" (node-tags node)))
+                               (<:div :id "post-body"
+                                      (node-body node))))))))
 
 (defun show-node-page (node)
-  (<:html
-   (<:head
-    (<:title (node-title node))
-    (<:meta :charset "UTF-8")
-    (load-fonts)
-    (mapcar (lambda (style)
-              (<:link :type "text/css"
-                      :rel "stylesheet"
-                      :href style))
-            (load-stylesheets)))
-   (<:body
-    (<:div :id "container"
-           (load-header)
-           (<:div :id "content"
-                  (<:h2 (node-title node))
-                  (<:div :id "post-body"
-                         (node-body node)))))))
+  (concatenate 'string
+               (<:doctype)
+               (<:html
+                (<:head
+                 (<:title (node-title node))
+                 (<:meta :charset "UTF-8")
+                 (mapcar (lambda (style)
+                           (<:link :type "text/css"
+                                   :rel "stylesheet"
+                                   :href style))
+                         (load-stylesheets)))
+                (<:body
+                 (<:div :id "container"
+                        (load-header)
+                        (<:div :id "content"
+                               (<:h2 (node-title node))
+                               (<:div :id "post-body"
+                                      (node-body node))))))))
 
 (defun reload-site (&key (from-disk nil))
   (when from-disk
