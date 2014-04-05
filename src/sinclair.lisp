@@ -22,9 +22,8 @@
 (defvar *koala-path* #P"/home/kyle/go/bin/koala")
 (defvar *dibbler-path* #P"/home/kyle/go/bin/dibbler")
 (defvar *md-extension* ".md")
-(defvar *sinclair-root* #P "/home/kyle/code/sites/sinclair")
+(defvar *sinclair-root* #P "/home/kyle/code/sites/metacircular")
 (defvar *pretty-date-format* '((:year 4 ) "-" (:month 2) "-" (:day 2)))
-
 (defvar *node-store* (make-hash-table :test 'equal))
 (defvar *asset-store* '())
 (defvar *site-config* (make-hash-table))
@@ -49,8 +48,8 @@
                          (swank:create-server :port port :dont-close t)
                          (setf swank-runningp t)))
                    swank-runningp)))
-      (setf (symbol-function 'setup-swank) #'fn)
-      (setup-swank))))
+      (setf (symbol-function 'toggle-swank) #'fn)
+      (toggle-swank))))
 
 ;;; start up actions
 
@@ -104,6 +103,16 @@
   (remove-if (lambda (filename)
                (ends-with filename *md-extension*))
              paths))
+
+(defun remove-static (paths)
+  (labels ((is-static (path)
+             (let ((root-path (concatenate 'string
+                                           (namestring *sinclair-root*)
+                                           "/static/")))
+               (if (null (search root-path (namestring path)))
+                   nil
+                   t))))
+    (remove-if #'is-static paths)))
 
 (defun push-failed (not-nodes node-json)
   "Push any of the failed nodes from node-json into the collection of not-nodes."
@@ -201,7 +210,7 @@
 
 (defun send-forth-minions (paths)
   "Send forth the minions who will seek out whom they may devour."
-  (let* ((file-list (koala-list-files paths))
+  (let* ((file-list (remove-static (koala-list-files paths)))
          (not-nodes (filter-out-nodes file-list))
          (node-list (filter-nodes file-list))
          (node-json (dibbler-load-nodes node-list)))
@@ -262,7 +271,7 @@
               (node-slug node))))
 
 (defun strip-prefix (s prefix)
-  (if (zerop (search prefix s))
+  (if (null (search prefix s))
       (subseq s (length prefix))
       s))
 
@@ -274,6 +283,7 @@
                               (length root-path))))
             (if (equal (pathname-name slug) "index")
                 (format nil "/~{~A/~}" (cdr (pathname-directory slug)))
+
                 slug))
           nil)))
 
@@ -383,11 +393,17 @@
     (<:li (<:a :href "http://kyleisom.net/" "Homepage"))
     (<:li (<:a :href "https://twitter.com/kyleisom" "Twitter"))
     (<:li (<:a :href "https://github.com/kisom/" "Github"))
-    (<:li (<:a :href "https://bitbucket.org/kisom/" "Bitbucket")))))
+    (<:li (<:a :href "https://bitbucket.org/kisom/" "Bitbucket")))
+   (<:div :id "feed-link" (<:a :href "/index.rss" "RSS Feed"))))
 
 (defun default-stylesheets ()
-  (list "/styles/styles.css"
+  (list "/static/css/styles.css"
         "http://fonts.googleapis.com/css?family=Habibi|Alegreya+SC"))
+
+(defun rss-date (node)
+  (local-time:format-timestring nil
+                                (node-date node)
+                                :format local-time:+rfc-1123-format+))
 
 (defun rss-feed ()
   (labels ((rss-item (node)
@@ -395,7 +411,11 @@
                                    :link (concatenate 'string "http://metacircular.net"
                                                  (build-slug node))
                                    :author "Kyle Isom"
-                                   :description (node-body node))))
+                                   :description (node-body node)
+                                   :pubdate
+                                   (local-time:format-timestring nil
+                                                                 (node-date node)
+                                                                 :format local-time:+rfc-1123-format+))))
     (with-output-to-string (s)
       (xml-emitter:with-rss2 (s :encoding "UTF-8")
         (xml-emitter:rss-channel-header "Metacircular" "http://metacircular.net/")
