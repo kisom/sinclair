@@ -413,7 +413,7 @@
                                    :link (concatenate 'string "http://metacircular.net"
                                                  (build-slug node))
                                    :author "Kyle Isom"
-                                   :description (node-body node)
+                                   ;; (:description (node-body node)
                                    :pubdate
                                    (local-time:format-timestring nil
                                                                  (node-date node)
