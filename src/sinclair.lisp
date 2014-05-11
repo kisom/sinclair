@@ -413,12 +413,12 @@
                                    :link (concatenate 'string "http://metacircular.net"
                                                  (build-slug node))
                                    :author "Kyle Isom"
-                                   ;; (:description (node-body node)
+                                   ;; :description (node-body node)
                                    :pubdate
                                    (local-time:format-timestring nil
                                                                  (node-date node)
                                                                  :format local-time:+rfc-1123-format+))))
     (with-output-to-string (s)
-      (xml-emitter:with-rss2 (s :encoding "UTF-8")
+      (xml-emitter:with-rss2 (s :encoding "ISO-8859-1")
         (xml-emitter:rss-channel-header "Metacircular" "http://metacircular.net/")
         (mapcar #'rss-item (filter-pages (sort-nodes-by-time (load-all-nodes))))))))
