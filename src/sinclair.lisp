@@ -400,7 +400,7 @@
 
 (defun default-stylesheets ()
   (list "/static/css/styles.css"
-        "http://fonts.googleapis.com/css?family=Habibi|Alegreya+SC"))
+        "http://fonts.googleapis.com/css?family=Habibi|Alegreya+SC|Alegreya"))
 
 (defun rss-date (node)
   (local-time:format-timestring nil

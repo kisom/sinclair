@@ -12,27 +12,37 @@
   `(restas:define-route ,route-name (,route-url)
      (restas:redirect 'index-route)))
 
+(defparameter logger (logsling:new-logger "127.0.0.1:4141" "metacircular.net"))
+
+(defun sling-log (status)
+  (logsling:sling logger status hunchentoot:*request*))
+
 (restas:define-route index-route ("/" :method :get)
-  (concatenate 'string
-               (<:doctype)
-               (<:html
-                (<:head
-                 (<:title (or (gethash :title *site-config*) ""))
-                 (<:meta :charset "UTF-8")
-                 (mapcar (lambda (style)
-                           (<:link :type "text/css"
-                                   :rel "stylesheet"
-                                   :href style))
-                         (load-stylesheets)))
-                (<:body
-                 (<:div :id "container"
-                        (load-header)
-                        (<:div :id "content"
-                               (<:h2 "Table of Contents")
-                               (load-and-index-nodes-by-year)))))))
+  (progn
+    ()
+    (sling-log 200)
+    (concatenate 'string
+                 (<:doctype)
+                 (<:html
+                  (<:head
+                   (<:title (or (gethash :title *site-config*) ""))
+                   (<:meta :charset "UTF-8")
+                   (mapcar (lambda (style)
+                             (<:link :type "text/css"
+                                     :rel "stylesheet"
+                                     :href style))
+                           (load-stylesheets)))
+                  (<:body
+                   (<:div :id "container"
+                          (load-header)
+                          (<:div :id "content"
+                                 (<:h2 "Table of Contents")
+                                 (load-and-index-nodes-by-year))))))))
 
 (restas:define-route blog-rss ("/index.rss" :method :get)
-  (rss-feed))
+  (progn
+    (sling-log 200)
+    (rss-feed)))
 
 (defun build-route (node)
   (when node
@@ -47,7 +57,9 @@
           (route-path (build-slug node)))
       (eval
        `(restas:define-route ,route-name (,route-path)
-          (show-node-post ,node))))))
+          (progn
+            (sling-log 200)
+            (show-node-post ,node)))))))
 
 (defun build-page-route (node)
   (when node
@@ -56,7 +68,9 @@
                         (sanitize-static-slug route-path))))
       (eval
        `(restas:define-route ,route-name (,route-path)
-          (show-node-page ,node))))))
+          (progn
+            (sling-log 200)
+            (show-node-page ,node)))))))
 
 (defun build-asset-route (path)
   (when path
@@ -71,7 +85,9 @@
       (eval
        `(restas:define-route ,route-name (,route-path :method :get 
                                                       :content-type ,content-type)
-          (file-string ,path))))))
+          (progn
+            (sling-log 200)
+            (file-string ,path)))))))
 
 (defun show-node-post (node)
   (concatenate 'string
