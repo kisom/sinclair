@@ -2,21 +2,34 @@
 
 ;;; page generation macros and routes
 
+;;; load-and-index-nodes-by-year produces an HTML fragment, as a
+;;; string, that indexes all the currently-loaded nodes by year,
+;;; ordering each post in ascending order by date published grouped by
+;;; year.
 (defmacro load-and-index-nodes-by-year ()
   `(mapcar #'index-for-year
            (group-nodes-by-year
             (filter-pages
              (load-all-nodes)))))
 
+;;; invalidate-route causes the named route and URL to be redirected
+;;; back to the index page.
 (defmacro invalidate-route (route-name route-url)
   `(restas:define-route ,route-name (,route-url)
      (restas:redirect 'index-route)))
 
+;;; logger defines the endpoint to send logs to, and provides this
+;;; site's name for annotation in the logs.
 (defparameter logger (logsling:new-logger "127.0.0.1:4141" "metacircular.net"))
 
+;;; sling-logs sends the log, marked with the provided status, to the
+;;; log collector.
 (defun sling-log (status)
   (logsling:sling logger status hunchentoot:*request*))
 
+;;; The index route shows the list of posts, grouped by year in
+;;; ascending date order (i.e. generated from
+;;; `load-and-index-nodes-by-year`).
 (restas:define-route index-route ("/" :method :get)
   (progn
     ()
@@ -39,7 +52,10 @@
                                  (<:h2 "Table of Contents")
                                  (load-and-index-nodes-by-year))))))))
 
-(restas:define-route categories-route ("/categories" :method :get)
+;;; The tags-route displays a sorted, unordered list of all the tags
+;;; in all posts. These are linked to tag pages, which display a list
+;;; of all the posts that are thusly tagged.
+(restas:define-route tags-route ("/tags" :method :get)
  (concatenate 'string
                (<:doctype)
                (<:html
@@ -63,19 +79,28 @@
                                     (<:a :href
                                          (format nil "/category/~A" tag)
                                          tag)))
-                                 (build-categories)))))))))
+                                 (build-tags)))))))))
 
-(restas:define-route category-route ("/category" :method :get)
-  (categories-route))
+;;; tags-route2, tags-route3, and tags-route4 provide alternate tag
+;;; page routes. They rely on the fact that `restas:define-route`
+;;; generates a function with the route name that generates the HTML.
+(restas:define-route tags-route2 ("/tags/" :method :get)
+  (tags-route))
 
-(restas:define-route category-route2 ("/category/" :method :get)
-  (categories-route))
+(restas:define-route tags-route3 ("/tag" :method :get)
+  (tags-route))
 
+(restas:define-route tags-route4 ("/tag/" :method :get)
+  (tags-route))
+
+;;; blog-rss generates a route for the RSS feed.
 (restas:define-route blog-rss ("/index.rss" :method :get)
   (progn
     (sling-log 200)
     (rss-feed)))
 
+;;; build-route generates a new route for the node, handling pages and
+;;; posts differently.
 (defun build-route (node)
   (when node
     (case (node-mode node)
@@ -83,6 +108,9 @@
       (:post (build-post-route node))
       (otherwise nil))))
 
+;;; build-post-route creates an appropriate route definition for a
+;;; post; namely, it generates a slug that includes the base route
+;;; "/blog" and a URL based on the date and slug.
 (defun build-post-route (node)
   (when node
     (let ((route-name (intern-string (node-slug node)))
@@ -179,26 +207,26 @@
                 (getf node-list :assets))))
   (mapcar #'build-route
           (load-all-nodes))
-  (build-categories))
+  (build-tags))
 
 
-(defun build-categories ()
-  (setf *site-categories* (make-hash-table :test #'equal))
+(defun build-tags ()
+  (setf *site-tags* (make-hash-table :test #'equal))
   (mapcar (lambda (node) (store-node-tags node)) 
           (filter-pages (load-all-nodes)))
   (sort 
-   (loop for key being the hash-keys of *site-categories* collecting key)
+   (loop for key being the hash-keys of *site-tags* collecting key)
    #'string-lessp))
 
 (defun store-node-tags (node)
   (dolist (tag (node-tags node))
     (multiple-value-bind (tagged-nodes present)
-        (gethash tag *site-categories*)
+        (gethash tag *site-tags*)
       (declare (ignore present))
-      (setf (gethash tag *site-categories*)
+      (setf (gethash tag *site-tags*)
             (cons node tagged-nodes)))))
 
-(restas:define-route category-page ("/category/:category"
+(restas:define-route tag-page ("/tag/:tag"
                                     :method :get)
   (concatenate 'string
                (<:doctype)
@@ -215,7 +243,7 @@
                  (<:div :id "container"
                         (load-header)
                         (<:div :id "content"
-                               (<:h2 (format nil "Category: ~A" category))
+                               (<:h2 (format nil "Tag: ~A" tag))
                                (<:ul
                                 (mapcar
                                  (lambda (node)
@@ -223,4 +251,4 @@
                                     (<:a :href
                                          (build-slug node)
                                          (node-title node))))
-                                 (gethash category *site-categories*)))))))))
+                                 (gethash tag *site-tags*)))))))))

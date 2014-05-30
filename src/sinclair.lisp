@@ -27,7 +27,7 @@
 (defvar *node-store* (make-hash-table :test 'equal))
 (defvar *asset-store* '())
 (defvar *site-config* (make-hash-table))
-(defvar *site-categories* nil)
+(defvar *site-tags* nil)
 
 ;;; utilities
 
