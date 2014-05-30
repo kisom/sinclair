@@ -19,14 +19,15 @@
 ;; Hacks and glory await!
 
 (defvar *trailing-whitespace* '(#\Space #\Tab #\Newline))
-(defvar *koala-path* #P"/home/kyle/go/bin/koala")
-(defvar *dibbler-path* #P"/home/kyle/go/bin/dibbler")
+(defparameter *koala-path* #P"/home/kyle/code/go/bin/koala")
+(defparameter *dibbler-path* #P"/home/kyle/code/go/bin/dibbler")
 (defvar *md-extension* ".md")
 (defvar *sinclair-root* #P "/home/kyle/code/sites/metacircular")
 (defvar *pretty-date-format* '((:year 4 ) "-" (:month 2) "-" (:day 2)))
 (defvar *node-store* (make-hash-table :test 'equal))
 (defvar *asset-store* '())
 (defvar *site-config* (make-hash-table))
+(defvar *site-categories* nil)
 
 ;;; utilities
 
@@ -415,7 +416,7 @@
                                    :author "Kyle Isom"
                                    ;; :description (node-body node)
                                    :pubdate
-                                   (local-time:format-timestring nil
+ppp                                   (local-time:format-timestring nil
                                                                  (node-date node)
                                                                  :format local-time:+rfc-1123-format+))))
     (with-output-to-string (s)
