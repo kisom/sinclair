@@ -416,7 +416,7 @@
                                    :author "Kyle Isom"
                                    ;; :description (node-body node)
                                    :pubdate
-ppp                                   (local-time:format-timestring nil
+                                   (local-time:format-timestring nil
                                                                  (node-date node)
                                                                  :format local-time:+rfc-1123-format+))))
     (with-output-to-string (s)
