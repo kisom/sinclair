@@ -71,13 +71,13 @@
                  (<:div :id "container"
                         (load-header)
                         (<:div :id "content"
-                               (<:h2 "Categories")
+                               (<:h2 "Tags")
                                (<:ul
                                 (mapcar
                                  (lambda (tag)
                                    (<:li
                                     (<:a :href
-                                         (format nil "/category/~A" tag)
+                                         (format nil "/tag/~A" tag)
                                          tag)))
                                  (build-tags)))))))))
 
@@ -172,7 +172,7 @@
                                              (mapcar
                                               (lambda (tag)
                                                 (<:a :href
-                                                     (format nil "/category/~A" tag)
+                                                     (format nil "/tag/~A" tag)
                                                      tag))
                                               (node-tags node))))
                                (<:div :id "post-body"

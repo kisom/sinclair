@@ -19,8 +19,8 @@
 ;; Hacks and glory await!
 
 (defvar *trailing-whitespace* '(#\Space #\Tab #\Newline))
-(defparameter *koala-path* #P"/home/kyle/go/bin/koala")
-(defparameter *dibbler-path* #P"/home/kyle/go/bin/dibbler")
+(defvar *koala-path* #P"/home/kyle/go/bin/koala")
+(defvar *dibbler-path* #P"/home/kyle/go/bin/dibbler")
 (defvar *md-extension* ".md")
 (defvar *sinclair-root* #P "/home/kyle/code/sites/metacircular")
 (defvar *pretty-date-format* '((:year 4 ) "-" (:month 2) "-" (:day 2)))
