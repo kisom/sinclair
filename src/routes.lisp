@@ -65,6 +65,12 @@
                                          tag)))
                                  (build-categories)))))))))
 
+(restas:define-route category-route ("/category" :method :get)
+  (categories-route))
+
+(restas:define-route category-route2 ("/category/" :method :get)
+  (categories-route))
+
 (restas:define-route blog-rss ("/index.rss" :method :get)
   (progn
     (sling-log 200)
