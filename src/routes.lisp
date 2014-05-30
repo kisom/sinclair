@@ -172,7 +172,8 @@
         (mapcar #'build-asset-route
                 (getf node-list :assets))))
   (mapcar #'build-route
-          (load-all-nodes)))
+          (load-all-nodes))
+  (build-categories))
 
 
 (defun build-categories ()
