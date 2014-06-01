@@ -294,6 +294,12 @@
                (equal (node-mode node) :page))
              node-list))
 
+(defun filter-drafts (node-list)
+  "Filter out draft posts from the list of nodes."
+  (remove-if
+   #'post-is-draft
+   node-list))
+
 (defun unique-list (lst)
   "Given a sort list, returns the list as a set."
   (labels ((skip (skip-lst)
@@ -423,3 +429,8 @@
       (xml-emitter:with-rss2 (s :encoding "ISO-8859-1")
         (xml-emitter:rss-channel-header "Metacircular" "http://metacircular.net/")
         (mapcar #'rss-item (filter-pages (sort-nodes-by-time (load-all-nodes))))))))
+
+(defun post-is-draft (node)
+  (some (lambda (tag)
+          (equal "draft" tag))
+        (node-tags node)))

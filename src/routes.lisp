@@ -9,8 +9,9 @@
 (defmacro load-and-index-nodes-by-year ()
   `(mapcar #'index-for-year
            (group-nodes-by-year
-            (filter-pages
-             (load-all-nodes)))))
+            (filter-drafts
+             (filter-pages
+              (load-all-nodes))))))
 
 ;;; invalidate-route causes the named route and URL to be redirected
 ;;; back to the index page.
@@ -32,7 +33,6 @@
 ;;; `load-and-index-nodes-by-year`).
 (restas:define-route index-route ("/" :method :get)
   (progn
-    ()
     (sling-log 200)
     (concatenate 'string
                  (<:doctype)
@@ -75,10 +75,11 @@
                                (<:ul
                                 (mapcar
                                  (lambda (tag)
-                                   (<:li
-                                    (<:a :href
-                                         (format nil "/tag/~A" tag)
-                                         tag)))
+                                   (when (not (equal tag "draft"))
+                                     (<:li
+                                      (<:a :href
+                                           (format nil "/tag/~A" tag)
+                                           tag))))
                                  (build-tags)))))))))
 
 ;;; tags-route2, tags-route3, and tags-route4 provide alternate tag
@@ -251,4 +252,7 @@
                                     (<:a :href
                                          (build-slug node)
                                          (node-title node))))
-                                 (gethash tag *site-tags*)))))))))
+                                 (let ((nodes (gethash tag *site-tags*)))
+                                   (if (equal tag "draft")
+                                       nodes
+                                       (filter-drafts nodes)))))))))))
