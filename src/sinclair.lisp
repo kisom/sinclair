@@ -407,6 +407,7 @@
 
 (defun default-stylesheets ()
   (list "/static/css/styles.css"
+        "/static/css/fonts.css"
         "http://fonts.googleapis.com/css?family=Habibi|Alegreya+SC|Alegreya"))
 
 (defun rss-date (node)

@@ -21,6 +21,7 @@
   :depends-on (:sexml
                :cl-markdown
                :local-time
+               :logsling
                :restas
                :st-json
                :swank

@@ -167,15 +167,17 @@
                         (load-header)
                         (<:div :id "content"
                                (<:h2 (node-title node))
-                               (<:h4 "Published: " (pretty-node-date node))
-                               (<:h4 "Tags:"
-                                     (format nil "~{ ~A~^,~}"
-                                             (mapcar
-                                              (lambda (tag)
-                                                (<:a :href
-                                                     (format nil "/tag/~A" tag)
-                                                     tag))
-                                              (node-tags node))))
+                               (<:p (<:small
+                                     "Published: " (pretty-node-date node)))
+                               (<:p :class "taglist"
+                                    (<:strong "Tags:"
+                                              (format nil "~{ ~A~^,~}"
+                                                      (mapcar
+                                                       (lambda (tag)
+                                                         (<:a :href
+                                                              (format nil "/tag/~A" tag)
+                                                              tag))
+                                                       (node-tags node)))))
                                (<:div :id "post-body"
                                       (node-body node))))))))
 
@@ -244,7 +246,7 @@
                  (<:div :id "container"
                         (load-header)
                         (<:div :id "content"
-                               (<:h2 (format nil "Tag: ~A" tag))
+                               (<:p (<:strong (format nil "Tag: ~A" tag)))
                                (<:ul
                                 (mapcar
                                  (lambda (node)
