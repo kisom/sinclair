@@ -429,7 +429,11 @@
     (with-output-to-string (s)
       (xml-emitter:with-rss2 (s :encoding "ISO-8859-1")
         (xml-emitter:rss-channel-header "Metacircular" "http://metacircular.net/")
-        (mapcar #'rss-item (filter-pages (sort-nodes-by-time (load-all-nodes))))))))
+        (mapcar #'rss-item (filter-pages
+                            (sort-nodes-by-time
+                             (filter-drafts
+                              (filter-pages
+                               (load-all-nodes))))))))))
 
 (defun post-is-draft (node)
   (some (lambda (tag)
